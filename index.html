@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vodič ČSN">
+<meta name="theme-color" content="#0f3460">
+<link rel="manifest" href="manifest.json">
+<title>Výpočet vodiče ČSN</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg2: #161b22;
+    --bg3: #1f2937;
+    --border: #30363d;
+    --accent: #2563eb;
+    --accent2: #1d4ed8;
+    --green: #22c55e;
+    --red: #ef4444;
+    --yellow: #f59e0b;
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --radius: 10px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bot: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    padding-top: calc(var(--safe-top) + 0px);
+    padding-bottom: calc(var(--safe-bot) + 16px);
+  }
+
+  header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: calc(var(--safe-top) + 12px) 16px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  header h1 { font-size: 17px; font-weight: 600; }
+  header p { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+  .tabs {
+    display: flex;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    padding: 10px 16px;
+    font-size: 13px;
+    color: var(--text2);
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .page { display: none; padding: 16px; }
+  .page.active { display: block; }
+
+  .section {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 10px 14px 8px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg3);
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    gap: 8px;
+  }
+  .row:last-child { border-bottom: none; }
+  .row label {
+    font-size: 14px;
+    flex: 1;
+    color: var(--text);
+    min-width: 0;
+  }
+  .row .unit {
+    font-size: 12px;
+    color: var(--text2);
+    min-width: 28px;
+    text-align: right;
+  }
+  .row .hint {
+    font-size: 11px;
+    color: var(--text2);
+    margin-top: 2px;
+  }
+  .row-col { flex-direction: column; align-items: stretch; }
+  .row-col label { margin-bottom: 6px; }
+
+  input[type="number"], select {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 15px;
+    padding: 6px 10px;
+    width: 100px;
+    text-align: right;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  select { width: auto; min-width: 120px; text-align: left; padding-right: 28px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b949e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
+
+  .result-val {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .result-unit { font-size: 14px; color: var(--text2); margin-left: 4px; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .badge.ok { background: rgba(34,197,94,0.15); color: var(--green); }
+  .badge.fail { background: rgba(239,68,68,0.15); color: var(--red); }
+  .badge.warn { background: rgba(245,158,11,0.15); color: var(--yellow); }
+
+  .result-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .result-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+  .result-card .label { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+  .result-card .val { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .result-card .val.ok { color: var(--green); }
+  .result-card .val.fail { color: var(--red); }
+  .result-card .val.neutral { color: var(--text); }
+  .result-card .sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  .btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 16px;
+    transition: background 0.15s;
+  }
+  .btn:active { background: var(--accent2); }
+
+  .alert {
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    margin-bottom: 16px;
+    border: 1px solid;
+  }
+  .alert.ok { background: rgba(34,197,94,0.1); border-color: rgba(34,197,94,0.3); color: var(--green); }
+  .alert.fail { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: var(--red); }
+
+  /* Protocol */
+  .proto-section { margin-bottom: 16px; }
+  .proto-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text2);
+    margin-bottom: 8px;
+  }
+  .proto-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    gap: 12px;
+  }
+  .proto-row:last-child { border-bottom: none; }
+  .proto-row .k { color: var(--text2); flex: 1; }
+  .proto-row .v { font-weight: 500; text-align: right; }
+
+  @media print {
+    header, .tabs, #tab-vstup, #tab-vysledky, .btn, .copy-btn { display: none !important; }
+    #tab-protokol { display: block !important; padding: 0; }
+    body { background: #fff !important; color: #000 !important; font-size: 12pt; }
+    .section, .result-card { border: 1px solid #ccc !important; background: #fff !important; }
+    .section-title { background: #eee !important; color: #000 !important; }
+    .row { border-bottom: 1px solid #ddd !important; }
+    .k, .v, label, span { color: #000 !important; }
+    .proto-title { color: #333 !important; }
+    #protokol-obsah { display: block !important; }
+    .print-header { display: block !important; }
+  }
+  .print-header { display: none; }
+  .copy-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 16px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    cursor: pointer;
+    width: 100%;
+    margin-bottom: 12px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ Výpočet vodiče ČSN</h1>
+  <p>ČSN 33 2000-5-52 · ČSN 33 2130</p>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('vstup')">① Vstup</button>
+  <button class="tab" onclick="showTab('vysledky')">② Výsledky</button>
+  <button class="tab" onclick="showTab('protokol')">③ Protokol</button>
+</div>
+
+<!-- ① VSTUP -->
+<div id="tab-vstup" class="page active">
+
+  <div class="section">
+    <div class="section-title">① Identifikace</div>
+    <div class="row row-col">
+      <label>Název projektu</label>
+      <input type="text" id="projekt" placeholder="Např. Wallbox" style="width:100%;text-align:left">
+    </div>
+    <div class="row row-col">
+      <label>Číslo obvodu</label>
+      <input type="text" id="obvod" placeholder="Např. Wallbox 01" style="width:100%;text-align:left">
+    </div>
+    <div class="row row-col">
+      <label>Objekt / rozvaděč</label>
+      <input type="text" id="objekt" placeholder="Např. Kováků 7, Praha 5" style="width:100%;text-align:left">
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">② Soustava</div>
+    <div class="row">
+      <label>Elektrická soustava</label>
+      <select id="soustava" onchange="soustavChange()">
+        <option value="3">3-fázová (400V)</option>
+        <option value="1">1-fázová (230V)</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>Typ obvodu</label>
+      <select id="typ_obvodu">
+        <option value="ostatni">Ostatní spotřebiče (5%)</option>
+        <option value="osvetleni">Osvětlení (3%)</option>
+        <option value="vlastni">Vlastní limit</option>
+      </select>
+    </div>
+    <div class="row" id="row-du-vlastni" style="display:none">
+      <label>Max. ΔU [%]</label>
+      <input type="number" id="du_max_vlastni" value="5" step="0.5" min="0.5" max="10">
+      <span class="unit">%</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">③ Výkonové parametry</div>
+    <div class="row">
+      <label>Způsob zadání</label>
+      <select id="zpusob" onchange="zpusobChange()">
+        <option value="prikon">Ze jmenovitého příkonu</option>
+        <option value="proud">Přímý proud Ib</option>
+      </select>
+    </div>
+    <div id="blok-prikon">
+      <div class="row">
+        <label>Příkon P [kW]</label>
+        <input type="number" id="prikon" value="11" step="0.1" min="0">
+        <span class="unit">kW</span>
+      </div>
+      <div class="row">
+        <label>Soudobost η</label>
+        <input type="number" id="eta" value="1" step="0.05" min="0.1" max="1">
+        <span class="unit">–</span>
+      </div>
+      <div class="row">
+        <label>Účiník cosφ</label>
+        <input type="number" id="cosphi" value="0.9" step="0.01" min="0.1" max="1">
+        <span class="unit">–</span>
+      </div>
+    </div>
+    <div id="blok-proud" style="display:none">
+      <div class="row">
+        <label>Výpočtový proud Ib [A]</label>
+        <input type="number" id="ib_primy" value="20" step="0.1" min="0">
+        <span class="unit">A</span>
+      </div>
+      <div class="row">
+        <label>Účiník cosφ</label>
+        <input type="number" id="cosphi2" value="0.9" step="0.01" min="0.1" max="1">
+        <span class="unit">–</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">④ Vodič a instalace</div>
+    <div class="row">
+      <label>Materiál vodiče</label>
+      <select id="material">
+        <option value="Cu">Cu – měď</option>
+        <option value="Al">Al – hliník (≥16 mm²)</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>Typ izolace</label>
+      <select id="izolace">
+        <option value="XLPE">XLPE / EPR (90°C)</option>
+        <option value="PVC">PVC (70°C)</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>Průřez S [mm²]</label>
+      <select id="prurez">
+        <option value="15">1,5</option>
+        <option value="25">2,5</option>
+        <option value="40" selected>4</option>
+        <option value="60">6</option>
+        <option value="100">10</option>
+        <option value="160">16</option>
+        <option value="250">25</option>
+        <option value="350">35</option>
+        <option value="500">50</option>
+        <option value="700">70</option>
+        <option value="950">95</option>
+        <option value="1200">120</option>
+        <option value="1500">150</option>
+        <option value="1850">185</option>
+        <option value="2400">240</option>
+        <option value="3000">300</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>Počet nabitých vodičů nₗ</label>
+      <select id="nabite">
+        <option value="2">2 (1-fázová)</option>
+        <option value="3" selected>3 (3-fázová)</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>Způsob uložení</label>
+      <select id="ulozeni">
+        <option value="A1">A1 – jednožil. v trubce ve zdi</option>
+        <option value="A2">A2 – vícežil. v trubce ve zdi</option>
+        <option value="B1" selected>B1 – jednožil. v trubce na zdi</option>
+        <option value="B2">B2 – vícežil. kabel na zdi</option>
+        <option value="C">C – kabel na povrchu</option>
+        <option value="D1">D1 – v zemi (trubka)</option>
+        <option value="D2">D2 – v zemi (přímé)</option>
+        <option value="E">E – volně ve vzduchu</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>Délka vedení L [m]</label>
+      <input type="number" id="delka" value="43" step="1" min="1">
+      <span class="unit">m</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">⑤ Opravné koeficienty</div>
+    <div class="row">
+      <label>Teplota okolí θₐ [°C]</label>
+      <select id="teplota">
+        <option value="10">10 °C</option>
+        <option value="15">15 °C</option>
+        <option value="20">20 °C</option>
+        <option value="25">25 °C</option>
+        <option value="30" selected>30 °C (ref.)</option>
+        <option value="35">35 °C</option>
+        <option value="40">40 °C</option>
+        <option value="45">45 °C</option>
+        <option value="50">50 °C</option>
+        <option value="55">55 °C</option>
+        <option value="60">60 °C</option>
+        <option value="65">65 °C (jen XLPE)</option>
+        <option value="70">70 °C (jen XLPE)</option>
+        <option value="75">75 °C (jen XLPE)</option>
+        <option value="80">80 °C (jen XLPE)</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>Počet sdružených obvodů n</label>
+      <select id="sdruzene">
+        <option value="1" selected>1 (bez redukce)</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7">7</option>
+        <option value="8">8</option>
+        <option value="9">9</option>
+        <option value="10">10</option>
+        <option value="12">12</option>
+        <option value="14">14</option>
+        <option value="16">16</option>
+        <option value="18">18</option>
+        <option value="20">20</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">⑥ Jistící prvek</div>
+    <div class="row">
+      <label>Jmenovitý proud In [A]</label>
+      <select id="in_jistic">
+        <option value="6">6 A</option>
+        <option value="10">10 A</option>
+        <option value="13">13 A</option>
+        <option value="16">16 A</option>
+        <option value="20" selected>20 A</option>
+        <option value="25">25 A</option>
+        <option value="32">32 A</option>
+        <option value="40">40 A</option>
+        <option value="50">50 A</option>
+        <option value="63">63 A</option>
+        <option value="80">80 A</option>
+        <option value="100">100 A</option>
+        <option value="125">125 A</option>
+        <option value="160">160 A</option>
+        <option value="200">200 A</option>
+        <option value="250">250 A</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">⑦ Reaktance vodiče</div>
+    <div class="row">
+      <label>Měrná reaktance x [mΩ/m]</label>
+      <input type="number" id="reaktance" value="0.08" step="0.01" min="0">
+      <span class="unit">mΩ/m</span>
+    </div>
+    <div class="row">
+      <div style="font-size:12px;color:var(--text2)">Typicky: kabely ≈ 0,06–0,10 · silové kabely ≈ 0,10–0,12</div>
+    </div>
+  </div>
+
+  <button class="btn" onclick="vypocitej(); showTab('vysledky')">⚡ Vypočítat →</button>
+</div>
+
+<!-- ② VÝSLEDKY -->
+<div id="tab-vysledky" class="page">
+  <button class="btn" onclick="vypocitej()">🔄 Přepočítat</button>
+
+  <div id="celkovy-vysledek" class="alert ok">✔ Spusťte výpočet</div>
+
+  <div class="result-grid">
+    <div class="result-card">
+      <div class="label">Výpočtový proud Ib</div>
+      <div class="val neutral" id="r-ib">–</div>
+      <div class="sub">A</div>
+    </div>
+    <div class="result-card">
+      <div class="label">Iz₀ základní zatíž.</div>
+      <div class="val neutral" id="r-iz0">–</div>
+      <div class="sub">A (tab. B.52)</div>
+    </div>
+    <div class="result-card">
+      <div class="label">k₁ · k₂ korekce</div>
+      <div class="val neutral" id="r-k">–</div>
+      <div class="sub">k₁ × k₂</div>
+    </div>
+    <div class="result-card">
+      <div class="label">Iz opravená zatíž.</div>
+      <div class="val neutral" id="r-iz">–</div>
+      <div class="sub">A</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Posouzení proudové zatížitelnosti</div>
+    <div class="row">
+      <label>Ib ≤ Iz</label>
+      <span id="r-cond1" class="badge">–</span>
+    </div>
+    <div class="row">
+      <label>Ib ≤ In</label>
+      <span id="r-cond2" class="badge">–</span>
+    </div>
+    <div class="row">
+      <label>In ≤ Iz</label>
+      <span id="r-cond3" class="badge">–</span>
+    </div>
+    <div class="row">
+      <label style="font-weight:600">Ib ≤ In ≤ Iz  (hlavní podmínka)</label>
+      <span id="r-cond4" class="badge">–</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Výpočet úbytku napětí</div>
+    <div class="row">
+      <label>Odpor vodiče r</label>
+      <span id="r-res" style="font-size:15px;font-variant-numeric:tabular-nums">–</span>
+      <span class="unit">mΩ/m</span>
+    </div>
+    <div class="row">
+      <label>sinφ</label>
+      <span id="r-sinphi" style="font-size:15px">–</span>
+    </div>
+    <div class="row">
+      <label>ΔU absolutní</label>
+      <span id="r-du-v" style="font-size:15px;font-variant-numeric:tabular-nums">–</span>
+      <span class="unit">V</span>
+    </div>
+    <div class="row">
+      <label>ΔU relativní</label>
+      <span id="r-du-pct" style="font-size:18px;font-weight:700;font-variant-numeric:tabular-nums">–</span>
+      <span class="unit">%</span>
+    </div>
+    <div class="row">
+      <label>Povolené ΔU max</label>
+      <span id="r-du-max" style="font-size:15px">–</span>
+      <span class="unit">%</span>
+    </div>
+    <div class="row">
+      <label>Posouzení ΔU</label>
+      <span id="r-du-cond" class="badge">–</span>
+    </div>
+  </div>
+
+  <button class="btn" onclick="showTab('protokol')" style="background:var(--bg3);color:var(--text);border:1px solid var(--border)">📄 Zobrazit protokol →</button>
+</div>
+
+<!-- ③ PROTOKOL -->
+<div id="tab-protokol" class="page">
+  <button class="btn" onclick="vypocitej()">🔄 Přepočítat</button>
+
+  <div id="protokol-obsah">
+    <p style="color:var(--text2);text-align:center;padding:32px">Nejprve proveďte výpočet</p>
+  </div>
+
+  <button class="copy-btn" onclick="tiskPDF()" style="background:var(--accent);color:#fff;border-color:var(--accent);margin-bottom:8px">🖨 Uložit jako PDF</button>
+  <button class="copy-btn" onclick="kopirujProtokolText()">📋 Kopírovat text protokolu</button>
+</div>
+
+<script>
+// ===================== LOOKUP TABLES =====================
+
+// Klíč: {material}_{izolace}_{nabite}_{prurez} → [A1,A2,B1,B2,C,D1,D2,E,F]
+// Průřez je ve stovkách mm² * 10, viz klíč z Numbers (15=1.5mm², 25=2.5mm², atd.)
+const IZ0_TABLE = {
+  // Cu PVC 3 nabité vodiče
+  "Cu_PVC_3_15":   [13,13,15,15,17.5,18,18,19,null],
+  "Cu_PVC_3_25":   [18,16.5,19.5,18.5,23,24,23,26,null],
+  "Cu_PVC_3_40":   [24,22,26,25,30,31,29,35,null],
+  "Cu_PVC_3_60":   [31,28,34,32,38,39,36,44,null],
+  "Cu_PVC_3_100":  [42,39,46,43,52,52,48,60,null],
+  "Cu_PVC_3_160":  [56,52,61,57,69,67,62,80,null],
+  "Cu_PVC_3_250":  [73,68,80,75,90,86,80,101,null],
+  "Cu_PVC_3_350":  [89,83,99,92,111,103,96,126,null],
+  "Cu_PVC_3_500":  [108,99,119,110,133,122,113,153,null],
+  "Cu_PVC_3_700":  [136,125,151,140,168,151,140,196,null],
+  "Cu_PVC_3_950":  [164,150,182,169,201,179,166,238,null],
+  "Cu_PVC_3_1200": [188,172,210,197,232,203,189,276,null],
+  "Cu_PVC_3_1500": [216,196,240,227,268,230,213,318,null],
+  "Cu_PVC_3_1850": [245,223,271,259,300,258,240,362,null],
+  "Cu_PVC_3_2400": [286,261,320,305,351,297,277,424,null],
+  "Cu_PVC_3_3000": [328,298,367,351,408,null,null,486,null],
+  // Cu PVC 2 nabité vodiče
+  "Cu_PVC_2_15":   [15,14.5,17.5,17,19.5,22,20,22,null],
+  "Cu_PVC_2_25":   [21,19.5,24,23,27,29,26,30,null],
+  "Cu_PVC_2_40":   [28,26,32,30,36,38,34,40,null],
+  "Cu_PVC_2_60":   [36,33,41,38,46,47,42,51,null],
+  "Cu_PVC_2_100":  [50,46,57,52,63,61,55,70,null],
+  "Cu_PVC_2_160":  [66,61,76,69,85,79,71,94,null],
+  "Cu_PVC_2_250":  [84,78,101,90,112,101,91,119,null],
+  "Cu_PVC_2_350":  [104,96,125,111,138,121,109,148,null],
+  "Cu_PVC_2_500":  [125,115,151,133,168,144,130,180,null],
+  "Cu_PVC_2_700":  [160,149,192,168,213,178,161,232,null],
+  "Cu_PVC_2_950":  [194,180,232,201,258,211,191,282,null],
+  "Cu_PVC_2_1200": [225,208,269,232,299,240,217,328,null],
+  "Cu_PVC_2_1500": [260,240,309,268,344,271,246,379,null],
+  "Cu_PVC_2_1850": [297,271,353,300,392,304,278,434,null],
+  "Cu_PVC_2_2400": [350,318,415,351,461,350,320,514,null],
+  "Cu_PVC_2_3000": [400,362,474,408,530,null,null,593,null],
+  // Cu XLPE 3 nabité vodiče
+  "Cu_XLPE_3_15":  [15,14,18,17,21,22,22,23,null],
+  "Cu_XLPE_3_25":  [21,19,25,23,28,29,28,31,null],
+  "Cu_XLPE_3_40":  [28,25,33,30,37,38,36,41,null],
+  "Cu_XLPE_3_60":  [36,32,43,38,47,47,45,53,null],
+  "Cu_XLPE_3_100": [50,44,59,53,64,63,60,73,null],
+  "Cu_XLPE_3_160": [66,59,79,71,86,81,77,98,null],
+  "Cu_XLPE_3_250": [84,76,105,95,115,104,99,129,null],
+  "Cu_XLPE_3_350": [104,93,130,117,143,125,119,161,null],
+  "Cu_XLPE_3_500": [125,112,157,141,173,148,140,196,null],
+  "Cu_XLPE_3_700": [158,141,200,179,222,183,173,251,null],
+  "Cu_XLPE_3_950": [191,171,242,217,270,216,204,304,null],
+  "Cu_XLPE_3_1200":[220,197,281,251,314,246,232,354,null],
+  "Cu_XLPE_3_1500":[253,226,324,290,363,278,261,410,null],
+  "Cu_XLPE_3_1850":[289,259,371,332,415,312,293,469,null],
+  "Cu_XLPE_3_2400":[341,305,439,392,490,359,338,553,null],
+  "Cu_XLPE_3_3000":[394,351,505,449,567,null,null,637,null],
+  // Cu XLPE 2 nabité vodiče
+  "Cu_XLPE_2_15":  [17,15.5,21,19.5,24,26,25,27,null],
+  "Cu_XLPE_2_25":  [23,21,29,27,33,36,34,37,null],
+  "Cu_XLPE_2_40":  [31,28,38,35,43,46,43,49,null],
+  "Cu_XLPE_2_60":  [40,36,49,44,55,58,54,62,null],
+  "Cu_XLPE_2_100": [54,49,66,60,75,77,71,83,null],
+  "Cu_XLPE_2_160": [73,66,90,80,101,103,95,113,null],
+  "Cu_XLPE_2_250": [95,85,119,105,133,134,124,149,null],
+  "Cu_XLPE_2_350": [117,105,146,128,164,161,149,182,null],
+  "Cu_XLPE_2_500": [141,126,176,154,198,192,178,220,null],
+  "Cu_XLPE_2_700": [179,160,226,198,253,240,224,280,null],
+  "Cu_XLPE_2_950": [216,194,275,239,307,283,264,338,null],
+  "Cu_XLPE_2_1200":[249,224,321,277,356,323,300,394,null],
+  "Cu_XLPE_2_1500":[285,257,368,319,409,363,338,455,null],
+  "Cu_XLPE_2_1850":[326,294,422,366,470,406,380,523,null],
+  "Cu_XLPE_2_2400":[385,347,500,433,557,466,437,621,null],
+  "Cu_XLPE_2_3000":[445,400,578,500,642,null,null,718,null],
+  // Al PVC 3 (min 16mm²)
+  "Al_PVC_3_160":  [44,41,49,46,56,52,48,64,null],
+  "Al_PVC_3_250":  [57,53,64,61,73,67,63,82,null],
+  "Al_PVC_3_350":  [70,65,79,75,90,80,75,101,null],
+  "Al_PVC_3_500":  [84,79,95,88,108,95,88,123,null],
+  "Al_PVC_3_700":  [107,99,121,112,136,117,109,158,null],
+  "Al_PVC_3_950":  [129,119,146,135,164,139,129,191,null],
+  "Al_PVC_3_1200": [149,136,169,155,188,157,146,220,null],
+  "Al_PVC_3_1500": [170,155,193,178,216,177,165,253,null],
+  "Al_PVC_3_1850": [194,176,220,203,245,198,185,290,null],
+  "Al_PVC_3_2400": [227,207,260,240,286,228,214,341,null],
+  "Al_PVC_3_3000": [261,237,299,277,328,null,null,392,null],
+  "Al_PVC_2_160":  [52,48,60,55,67,62,56,73,null],
+  "Al_PVC_2_250":  [68,63,79,72,88,81,73,95,null],
+  "Al_PVC_2_350":  [84,78,97,89,109,97,88,118,null],
+  "Al_PVC_2_500":  [101,94,117,107,131,114,103,142,null],
+  "Al_PVC_2_700":  [128,119,149,136,167,141,128,182,null],
+  "Al_PVC_2_950":  [154,144,180,164,202,166,151,220,null],
+  "Al_PVC_2_1200": [178,166,208,190,233,189,172,254,null],
+  "Al_PVC_2_1500": [204,190,239,218,268,213,194,292,null],
+  "Al_PVC_2_1850": [232,216,272,249,304,240,219,335,null],
+  "Al_PVC_2_2400": [272,254,321,294,358,277,254,394,null],
+  "Al_PVC_2_3000": [313,292,369,338,411,null,null,453,null],
+  // Al XLPE 3
+  "Al_XLPE_3_160": [52,47,60,55,65,62,58,75,null],
+  "Al_XLPE_3_250": [68,62,78,72,86,80,75,99,null],
+  "Al_XLPE_3_350": [84,77,97,89,107,97,91,122,null],
+  "Al_XLPE_3_500": [101,92,117,105,128,115,108,149,null],
+  "Al_XLPE_3_700": [128,117,149,134,163,142,133,190,null],
+  "Al_XLPE_3_950": [154,141,180,161,197,168,157,230,null],
+  "Al_XLPE_3_1200":[177,162,208,186,227,190,178,266,null],
+  "Al_XLPE_3_1500":[201,183,239,214,259,213,200,308,null],
+  "Al_XLPE_3_1850":[230,210,274,245,295,240,225,352,null],
+  "Al_XLPE_3_2400":[272,248,326,291,348,276,259,418,null],
+  "Al_XLPE_3_3000":[314,285,378,336,399,null,null,482,null],
+  "Al_XLPE_2_160": [59,55,73,68,86,75,70,92,null],
+  "Al_XLPE_2_250": [77,72,96,90,110,97,91,119,null],
+  "Al_XLPE_2_350": [96,90,119,111,137,116,109,148,null],
+  "Al_XLPE_2_500": [115,108,144,135,167,138,130,180,null],
+};
+
+const METHODS = ["A1","A2","B1","B2","C","D1","D2","E","F"];
+
+// k1 korekce teploty: [teplota] → {PVC, XLPE}
+const K1_TABLE = {
+  10: {PVC:1.22, XLPE:1.15},
+  15: {PVC:1.17, XLPE:1.12},
+  20: {PVC:1.12, XLPE:1.08},
+  25: {PVC:1.06, XLPE:1.04},
+  30: {PVC:1.00, XLPE:1.00},
+  35: {PVC:0.94, XLPE:0.96},
+  40: {PVC:0.87, XLPE:0.91},
+  45: {PVC:0.79, XLPE:0.87},
+  50: {PVC:0.71, XLPE:0.82},
+  55: {PVC:0.61, XLPE:0.76},
+  60: {PVC:0.50, XLPE:0.71},
+  65: {PVC:null, XLPE:0.65},
+  70: {PVC:null, XLPE:0.58},
+  75: {PVC:null, XLPE:0.50},
+  80: {PVC:null, XLPE:0.41},
+};
+
+// k2 korekce sdružených obvodů
+const K2_TABLE = {1:1.0,2:0.8,3:0.7,4:0.65,5:0.6,6:0.57,7:0.54,8:0.52,9:0.5,10:0.48,12:0.45,14:0.43,16:0.41,18:0.39,20:0.38};
+
+// Měrný odpor [Ω·mm²/m]
+const RHO = {
+  "Cu_PVC_70":  0.02256,
+  "Cu_XLPE_90": 0.02450,
+  "Al_PVC_70":  0.03702,
+  "Al_XLPE_90": 0.04018,
+};
+
+// Průřez klíč → mm²
+const PRUREZ_MM = {15:1.5,25:2.5,40:4,60:6,100:10,160:16,250:25,350:35,500:50,700:70,950:95,1200:120,1500:150,1850:185,2400:240,3000:300};
+
+// ===================== VÝPOČET =====================
+let lastResult = null;
+
+function vypocitej() {
+  // Sbírání vstupů
+  const soustava = parseInt(document.getElementById('soustava').value);
+  const Un = soustava === 3 ? 400 : 230;
+  const typObvodu = document.getElementById('typ_obvodu').value;
+  const zpusob = document.getElementById('zpusob').value;
+  const material = document.getElementById('material').value;
+  const izolace = document.getElementById('izolace').value;
+  const prurezKey = document.getElementById('prurez').value;
+  const prurezMm = PRUREZ_MM[prurezKey];
+  const nabite = document.getElementById('nabite').value;
+  const ulozeni = document.getElementById('ulozeni').value;
+  const delka = parseFloat(document.getElementById('delka').value);
+  const teplota = parseInt(document.getElementById('teplota').value);
+  const sdruzene = parseInt(document.getElementById('sdruzene').value);
+  const inJistic = parseFloat(document.getElementById('in_jistic').value);
+  const reaktance = parseFloat(document.getElementById('reaktance').value);
+
+  let cosphi, Ib;
+  if (zpusob === 'prikon') {
+    const P = parseFloat(document.getElementById('prikon').value);
+    const eta = parseFloat(document.getElementById('eta').value);
+    cosphi = parseFloat(document.getElementById('cosphi').value);
+    Ib = soustava === 3
+      ? (P * 1000 * eta) / (Math.sqrt(3) * Un * cosphi)
+      : (P * 1000 * eta) / (Un * cosphi);
+  } else {
+    Ib = parseFloat(document.getElementById('ib_primy').value);
+    cosphi = parseFloat(document.getElementById('cosphi2').value);
+  }
+
+  // k1
+  const k1data = K1_TABLE[teplota];
+  const k1 = k1data ? (k1data[izolace] ?? null) : null;
+  if (k1 === null) {
+    showAlert('fail', `⚠ Teplota ${teplota}°C není povolena pro ${izolace} izolaci!`);
+    return;
+  }
+
+  // k2
+  const k2 = K2_TABLE[sdruzene] ?? 1.0;
+  const k = k1 * k2;
+
+  // Iz0
+  const tableKey = `${material}_${izolace}_${nabite}_${prurezKey}`;
+  const row = IZ0_TABLE[tableKey];
+  const methodIdx = METHODS.indexOf(ulozeni);
+  let iz0 = null;
+  if (row && methodIdx >= 0) {
+    iz0 = row[methodIdx];
+  }
+  if (!iz0) {
+    showAlert('fail', `⚠ Kombinace ${material}/${izolace}/${prurezMm}mm²/${ulozeni} není v tabulce!`);
+    return;
+  }
+
+  const Iz = iz0 * k;
+
+  // Podmínky
+  const c1 = Ib <= Iz;
+  const c2 = Ib <= inJistic;
+  const c3 = inJistic <= Iz;
+  const c4 = c1 && c2 && c3;
+
+  // Úbytek napětí
+  const rhoKey = `${material}_${izolace === 'PVC' ? 'PVC_70' : 'XLPE_90'}`;
+  const rho = RHO[rhoKey];
+  const r = (rho / prurezMm) * 1000; // mΩ/m
+  const sinphi = Math.sqrt(1 - cosphi * cosphi);
+  let duV;
+  if (soustava === 3) {
+    duV = Math.sqrt(3) * Ib * delka * (r * cosphi + reaktance * sinphi) / 1000;
+  } else {
+    duV = 2 * Ib * delka * (r * cosphi + reaktance * sinphi) / 1000;
+  }
+  const duPct = (duV / Un) * 100;
+
+  let duMax;
+  if (typObvodu === 'ostatni') duMax = 5;
+  else if (typObvodu === 'osvetleni') duMax = 3;
+  else duMax = parseFloat(document.getElementById('du_max_vlastni').value);
+
+  const duOk = duPct <= duMax;
+
+  // Uložení výsledku
+  lastResult = {
+    soustava, Un, typObvodu, material, izolace, prurezMm, nabite, ulozeni,
+    delka, teplota, sdruzene, inJistic, reaktance, cosphi, sinphi,
+    Ib, k1, k2, k, iz0, Iz, c1, c2, c3, c4, r, rho, duV, duPct, duMax, duOk,
+    projekt: document.getElementById('projekt').value,
+    obvod: document.getElementById('obvod').value,
+    objekt: document.getElementById('objekt').value,
+    datum: new Date().toLocaleDateString('cs-CZ'),
+    zpusob,
+    prikon: zpusob==='prikon' ? parseFloat(document.getElementById('prikon').value) : null,
+    eta: zpusob==='prikon' ? parseFloat(document.getElementById('eta').value) : null,
+  };
+
+  renderVysledky(lastResult);
+  renderProtokolHTML(lastResult);
+}
+
+function fmt(v, d=2) {
+  if (v === null || v === undefined) return '–';
+  return parseFloat(v).toFixed(d);
+}
+
+function badge(ok) {
+  return ok
+    ? '<span class="badge ok">✔ VYHOVUJE</span>'
+    : '<span class="badge fail">✘ NEVYHOVUJE</span>';
+}
+
+function renderVysledky(r) {
+  document.getElementById('r-ib').textContent = fmt(r.Ib) + ' A';
+  document.getElementById('r-ib').className = 'val neutral';
+  document.getElementById('r-iz0').textContent = fmt(r.iz0, 1) + ' A';
+  document.getElementById('r-iz0').className = 'val neutral';
+  document.getElementById('r-k').textContent = fmt(r.k, 3);
+  document.getElementById('r-k').className = 'val neutral';
+  document.getElementById('r-iz').textContent = fmt(r.Iz, 1) + ' A';
+  document.getElementById('r-iz').className = 'val ' + (r.c4 ? 'ok' : 'fail');
+
+  setBadge('r-cond1', r.c1);
+  setBadge('r-cond2', r.c2);
+  setBadge('r-cond3', r.c3);
+  setBadge('r-cond4', r.c4);
+
+  document.getElementById('r-res').textContent = fmt(r.r, 4);
+  document.getElementById('r-sinphi').textContent = fmt(r.sinphi, 4);
+  document.getElementById('r-du-v').textContent = fmt(r.duV, 3);
+  document.getElementById('r-du-pct').textContent = fmt(r.duPct, 3);
+  document.getElementById('r-du-max').textContent = fmt(r.duMax, 1);
+  setBadge('r-du-cond', r.duOk);
+
+  const overall = r.c4 && r.duOk;
+  const el = document.getElementById('celkovy-vysledek');
+  el.className = 'alert ' + (overall ? 'ok' : 'fail');
+  el.textContent = overall
+    ? `✔ VYHOVUJE – Vodič ${r.material} ${r.izolace} ${r.prurezMm} mm² splňuje všechny podmínky`
+    : `✘ NEVYHOVUJE – Zkontrolujte podmínky níže`;
+}
+
+function setBadge(id, ok) {
+  const el = document.getElementById(id);
+  el.className = 'badge ' + (ok ? 'ok' : 'fail');
+  el.textContent = ok ? '✔ VYHOVUJE' : '✘ NEVYHOVUJE';
+}
+
+function renderProtokolHTML(r) {
+  const html = `
+  <div class="section proto-section">
+    <div class="section-title">IDENTIFIKACE</div>
+    <div class="row"><span class="k">Projekt</span><span class="v">${r.projekt || '–'}</span></div>
+    <div class="row"><span class="k">Objekt / rozvaděč</span><span class="v">${r.objekt || '–'}</span></div>
+    <div class="row"><span class="k">Číslo obvodu</span><span class="v">${r.obvod || '–'}</span></div>
+    <div class="row"><span class="k">Datum</span><span class="v">${r.datum}</span></div>
+  </div>
+
+  <div class="section proto-section">
+    <div class="section-title">A) Vstupní parametry</div>
+    <div class="row"><span class="k">Soustava</span><span class="v">${r.soustava}-fázová, ${r.Un} V</span></div>
+    <div class="row"><span class="k">Typ obvodu</span><span class="v">${r.typObvodu === 'ostatni' ? 'Ostatní spotřebiče' : r.typObvodu === 'osvetleni' ? 'Osvětlení' : 'Vlastní'}</span></div>
+    ${r.zpusob === 'prikon' ? `
+    <div class="row"><span class="k">Příkon P</span><span class="v">${fmt(r.prikon,1)} kW</span></div>
+    <div class="row"><span class="k">Soudobost η</span><span class="v">${fmt(r.eta,2)}</span></div>
+    ` : ''}
+    <div class="row"><span class="k">Účiník cosφ</span><span class="v">${fmt(r.cosphi,2)}</span></div>
+    <div class="row"><span class="k">Výpočtový proud Ib</span><span class="v">${fmt(r.Ib,3)} A</span></div>
+  </div>
+
+  <div class="section proto-section">
+    <div class="section-title">B) Parametry vodiče a instalace</div>
+    <div class="row"><span class="k">Materiál</span><span class="v">${r.material}</span></div>
+    <div class="row"><span class="k">Typ izolace</span><span class="v">${r.izolace}</span></div>
+    <div class="row"><span class="k">Průřez S</span><span class="v">${r.prurezMm} mm²</span></div>
+    <div class="row"><span class="k">Způsob uložení</span><span class="v">${r.ulozeni}</span></div>
+    <div class="row"><span class="k">Počet nabitých vodičů</span><span class="v">${r.nabite}</span></div>
+    <div class="row"><span class="k">Délka vedení L</span><span class="v">${r.delka} m</span></div>
+  </div>
+
+  <div class="section proto-section">
+    <div class="section-title">C) Opravné koeficienty (ČSN 33 2000-5-52)</div>
+    <div class="row"><span class="k">Teplota okolí θₐ</span><span class="v">${r.teplota} °C</span></div>
+    <div class="row"><span class="k">k₁ – korekce teploty</span><span class="v">${fmt(r.k1,3)}</span></div>
+    <div class="row"><span class="k">Počet sdružených obvodů n</span><span class="v">${r.sdruzene}</span></div>
+    <div class="row"><span class="k">k₂ – korekce skupiny</span><span class="v">${fmt(r.k2,2)}</span></div>
+    <div class="row"><span class="k">k = k₁ · k₂</span><span class="v">${fmt(r.k,3)}</span></div>
+  </div>
+
+  <div class="section proto-section">
+    <div class="section-title">D) Posouzení proudové zatížitelnosti (ČSN 33 2000-5-52)</div>
+    <div class="row"><span class="k">Iz₀ základní zatížitelnost</span><span class="v">${fmt(r.iz0,1)} A</span></div>
+    <div class="row"><span class="k">Iz opravená zatížitelnost</span><span class="v">${fmt(r.Iz,2)} A</span></div>
+    <div class="row"><span class="k">In jistícího prvku</span><span class="v">${r.inJistic} A</span></div>
+    <div class="row"><span class="k">Ib ≤ Iz</span><span class="v" style="color:${r.c1?'var(--green)':'var(--red)'}">${r.c1?'✔ VYHOVUJE':'✘ NEVYHOVUJE'}</span></div>
+    <div class="row"><span class="k">Ib ≤ In</span><span class="v" style="color:${r.c2?'var(--green)':'var(--red)'}">${r.c2?'✔ VYHOVUJE':'✘ NEVYHOVUJE'}</span></div>
+    <div class="row"><span class="k">In ≤ Iz</span><span class="v" style="color:${r.c3?'var(--green)':'var(--red)'}">${r.c3?'✔ VYHOVUJE':'✘ NEVYHOVUJE'}</span></div>
+    <div class="row" style="background:var(--bg3)"><span class="k" style="font-weight:600">Ib ≤ In ≤ Iz (hl. podmínka)</span><span class="v" style="color:${r.c4?'var(--green)':'var(--red)'}; font-weight:600">${r.c4?'✔ VYHOVUJE':'✘ NEVYHOVUJE'}</span></div>
+  </div>
+
+  <div class="section proto-section">
+    <div class="section-title">E) Výpočet úbytku napětí (ČSN 33 2000-5-52 příl. C)</div>
+    <div class="row"><span class="k">Odpor vodiče r</span><span class="v">${fmt(r.r,4)} mΩ/m</span></div>
+    <div class="row"><span class="k">Reaktance x</span><span class="v">${fmt(r.reaktance,3)} mΩ/m</span></div>
+    <div class="row"><span class="k">sinφ</span><span class="v">${fmt(r.sinphi,4)}</span></div>
+    <div class="row"><span class="k">ΔU absolutní</span><span class="v">${fmt(r.duV,4)} V</span></div>
+    <div class="row"><span class="k">ΔU relativní</span><span class="v">${fmt(r.duPct,3)} %</span></div>
+    <div class="row"><span class="k">ΔU_max povolený</span><span class="v">${fmt(r.duMax,1)} %</span></div>
+    <div class="row" style="background:var(--bg3)"><span class="k" style="font-weight:600">Posouzení ΔU</span><span class="v" style="color:${r.duOk?'var(--green)':'var(--red)'}; font-weight:600">${r.duOk?'✔ VYHOVUJE':'✘ NEVYHOVUJE'}</span></div>
+  </div>
+
+  <div class="section proto-section">
+    <div class="section-title">CELKOVÉ POSOUZENÍ</div>
+    <div class="row" style="background:${r.c4&&r.duOk?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)'}">
+      <span style="font-size:15px;font-weight:700;color:${r.c4&&r.duOk?'var(--green)':'var(--red)'}">
+        ${r.c4&&r.duOk ? `✔ VYHOVUJE – Vodič ${r.material} ${r.izolace} ${r.prurezMm} mm² splňuje podmínky ČSN 33 2000-5-52 a ČSN 33 2130` : '✘ NEVYHOVUJE – Vodič nesplňuje podmínky'}
+      </span>
+    </div>
+  </div>
+  `;
+
+  document.getElementById('protokol-obsah').innerHTML = html;
+}
+
+function showAlert(type, msg) {
+  const el = document.getElementById('celkovy-vysledek');
+  el.className = 'alert ' + type;
+  el.textContent = msg;
+  showTab('vysledky');
+}
+
+function tiskPDF() {
+  if (!lastResult) { alert('Nejprve proveďte výpočet'); return; }
+  // Ensure protocol is rendered
+  renderProtokolHTML(lastResult);
+  // Small delay then print
+  setTimeout(() => window.print(), 100);
+}
+
+
+  if (!lastResult) { alert('Nejprve proveďte výpočet'); return; }
+  const r = lastResult;
+  const text = `PROTOKOL O VÝPOČTU ELEKTROINSTALACE
+Proudová zatížitelnost vodiče a úbytek napětí
+ČSN 33 2000-5-52 · ČSN 33 2130
+
+IDENTIFIKACE
+Projekt: ${r.projekt || '–'}
+Objekt: ${r.objekt || '–'}
+Obvod: ${r.obvod || '–'}
+Datum: ${r.datum}
+
+A) VSTUPNÍ PARAMETRY
+Soustava: ${r.soustava}-fázová, ${r.Un} V
+Výpočtový proud Ib: ${fmt(r.Ib,3)} A
+Účiník cosφ: ${fmt(r.cosphi,2)}
+
+B) PARAMETRY VODIČE
+Materiál: ${r.material}, Izolace: ${r.izolace}
+Průřez S: ${r.prurezMm} mm²
+Způsob uložení: ${r.ulozeni}
+Délka: ${r.delka} m
+
+C) OPRAVNÉ KOEFICIENTY
+Teplota θₐ: ${r.teplota} °C
+k₁: ${fmt(r.k1,3)}, k₂: ${fmt(r.k2,2)}, k: ${fmt(r.k,3)}
+
+D) POSOUZENÍ ZATÍŽITELNOSTI
+Iz₀: ${fmt(r.iz0,1)} A
+Iz: ${fmt(r.Iz,2)} A
+In: ${r.inJistic} A
+Ib ≤ Iz: ${r.c1?'VYHOVUJE':'NEVYHOVUJE'}
+Ib ≤ In: ${r.c2?'VYHOVUJE':'NEVYHOVUJE'}
+In ≤ Iz: ${r.c3?'VYHOVUJE':'NEVYHOVUJE'}
+Ib ≤ In ≤ Iz: ${r.c4?'✔ VYHOVUJE':'✘ NEVYHOVUJE'}
+
+E) ÚBYTEK NAPĚTÍ
+ΔU: ${fmt(r.duV,3)} V = ${fmt(r.duPct,3)} %
+ΔU_max: ${fmt(r.duMax,1)} %
+Posouzení ΔU: ${r.duOk?'✔ VYHOVUJE':'✘ NEVYHOVUJE'}
+
+VÝSLEDEK: ${r.c4&&r.duOk?'✔ VYHOVUJE':'✘ NEVYHOVUJE'}
+`;
+
+  navigator.clipboard.writeText(text)
+    .then(() => alert('✔ Protokol zkopírován do schránky'))
+    .catch(() => alert('Nelze kopírovat – zkuste ručně'));
+}
+
+// ===================== UI HELPERS =====================
+function showTab(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => {
+    if (t.textContent.toLowerCase().includes(id === 'vstup' ? '①' : id === 'vysledky' ? '②' : '③')) {
+      t.classList.add('active');
+    }
+  });
+  // Scroll to top
+  window.scrollTo(0,0);
+}
+
+function soustavChange() {
+  const s = document.getElementById('soustava').value;
+  document.getElementById('nabite').value = s === '3' ? '3' : '2';
+}
+
+function zpusobChange() {
+  const z = document.getElementById('zpusob').value;
+  document.getElementById('blok-prikon').style.display = z === 'prikon' ? '' : 'none';
+  document.getElementById('blok-proud').style.display = z === 'proud' ? '' : 'none';
+}
+
+document.getElementById('typ_obvodu').addEventListener('change', function() {
+  document.getElementById('row-du-vlastni').style.display = this.value === 'vlastni' ? '' : 'none';
+});
+
+// Service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
+
+// Inicializace
+document.getElementById('tab-vstup').classList.add('active');
+
+// Expose functions globally for onclick handlers
+window.vypocitej = vypocitej;
+window.showTab = showTab;
+window.soustavChange = soustavChange;
+window.zpusobChange = zpusobChange;
+window.tiskPDF = tiskPDF;
+window.kopirujProtokolText = kopirujProtokolText;
+</script>
+</body>
+</html>
