@@ -133,6 +133,17 @@
   }
   select { width: auto; min-width: 120px; text-align: left; padding-right: 28px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b949e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; }
   input:focus, select:focus { outline: none; border-color: var(--accent); }
+  input[type="text"] {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 14px;
+    padding: 8px 10px;
+    width: 100%;
+    text-align: left;
+    -webkit-appearance: none; appearance: none;
+  }
 
   .result-val {
     font-size: 22px;
@@ -263,24 +274,29 @@
 <!-- ① VSTUP -->
 <div id="tab-vstup" class="page active">
 
+  <!-- Identifikace – nahoře stejně jako Zs-app -->
   <div class="section">
-    <div class="section-title">① Identifikace</div>
+    <div class="section-title">Identifikace (volitelné)</div>
     <div class="row row-col">
       <label>Název projektu</label>
-      <input type="text" id="projekt" placeholder="Např. Wallbox" style="width:100%;text-align:left">
+      <input type="text" id="projekt" placeholder="např. Wallbox – garáž">
     </div>
     <div class="row row-col">
       <label>Číslo obvodu</label>
-      <input type="text" id="obvod" placeholder="Např. Wallbox 01" style="width:100%;text-align:left">
+      <input type="text" id="obvod" placeholder="např. B1.01 – zásuvky kuchyně">
     </div>
     <div class="row row-col">
       <label>Objekt / rozvaděč</label>
-      <input type="text" id="objekt" placeholder="Např. Kováků 7, Praha 5" style="width:100%;text-align:left">
+      <input type="text" id="objekt" placeholder="např. Kováků 7, Praha 5">
+    </div>
+    <div class="row row-col">
+      <label>Revizní technik</label>
+      <input type="text" id="revizak" placeholder="jméno a příjmení">
     </div>
   </div>
 
   <div class="section">
-    <div class="section-title">② Soustava</div>
+    <div class="section-title">1 · Soustava</div>
     <div class="row">
       <label>Elektrická soustava</label>
       <select id="soustava" onchange="soustavChange()">
@@ -304,7 +320,7 @@
   </div>
 
   <div class="section">
-    <div class="section-title">③ Výkonové parametry</div>
+    <div class="section-title">2 · Výkonové parametry</div>
     <div class="row">
       <label>Způsob zadání</label>
       <select id="zpusob" onchange="zpusobChange()">
@@ -344,7 +360,7 @@
   </div>
 
   <div class="section">
-    <div class="section-title">④ Vodič a instalace</div>
+    <div class="section-title">3 · Vodič a instalace</div>
     <div class="row">
       <label>Materiál vodiče</label>
       <select id="material">
@@ -408,7 +424,7 @@
   </div>
 
   <div class="section">
-    <div class="section-title">⑤ Opravné koeficienty</div>
+    <div class="section-title">4 · Opravné koeficienty</div>
     <div class="row">
       <label>Teplota okolí θₐ [°C]</label>
       <select id="teplota">
@@ -452,7 +468,7 @@
   </div>
 
   <div class="section">
-    <div class="section-title">⑥ Jistící prvek</div>
+    <div class="section-title">5 · Jistící prvek</div>
     <div class="row">
       <label>Jmenovitý proud In [A]</label>
       <select id="in_jistic">
@@ -832,6 +848,7 @@ function vypocitej() {
     projekt: document.getElementById('projekt').value,
     obvod: document.getElementById('obvod').value,
     objekt: document.getElementById('objekt').value,
+    revizak: document.getElementById('revizak').value,
     datum: new Date().toLocaleDateString('cs-CZ'),
     zpusob,
     prikon: zpusob==='prikon' ? parseFloat(document.getElementById('prikon').value) : null,
@@ -896,6 +913,7 @@ function renderProtokolHTML(r) {
     <div class="row"><span class="k">Projekt</span><span class="v">${r.projekt || '–'}</span></div>
     <div class="row"><span class="k">Objekt / rozvaděč</span><span class="v">${r.objekt || '–'}</span></div>
     <div class="row"><span class="k">Číslo obvodu</span><span class="v">${r.obvod || '–'}</span></div>
+    <div class="row"><span class="k">Revizní technik</span><span class="v">${r.revizak || '–'}</span></div>
     <div class="row"><span class="k">Datum</span><span class="v">${r.datum}</span></div>
   </div>
 
@@ -992,6 +1010,7 @@ IDENTIFIKACE
 Projekt: ${r.projekt || '–'}
 Objekt: ${r.objekt || '–'}
 Obvod: ${r.obvod || '–'}
+Revizní technik: ${r.revizak || '–'}
 Datum: ${r.datum}
 
 A) VSTUPNÍ PARAMETRY
