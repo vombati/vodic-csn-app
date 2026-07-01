@@ -350,6 +350,7 @@
   <button class="tab active" onclick="showTab('vstup')">① Vstup</button>
   <button class="tab" onclick="showTab('vysledky')">② Výsledky</button>
   <button class="tab" onclick="showTab('protokol')">③ Protokol</button>
+  <button class="tab" onclick="showTab('dc')">④ DC úbytek</button>
 </div>
 
 <!-- ① VSTUP -->
@@ -682,6 +683,122 @@
 
   <button class="copy-btn" onclick="tiskPDF()" style="background:var(--accent);color:#fff;border-color:var(--accent);margin-bottom:8px">🖨 Uložit jako PDF</button>
   <button class="copy-btn" onclick="kopirujProtokolText()">📋 Kopírovat text protokolu</button>
+</div>
+
+<!-- ④ DC ÚBYTEK NAPĚTÍ -->
+<div id="tab-dc" class="page">
+
+  <div class="section">
+    <div class="section-title">Vstupní parametry – DC obvod</div>
+    <div class="row">
+      <label>Napájecí napětí U<div class="hint">Jmenovité DC napětí zdroje</div></label>
+      <input type="number" id="dc_u" value="24" step="1" min="1">
+      <span class="unit">V</span>
+    </div>
+    <div class="row">
+      <label>Proud I<div class="hint">Maximální provozní proud obvodu</div></label>
+      <input type="number" id="dc_i" value="10" step="0.1" min="0.01">
+      <span class="unit">A</span>
+    </div>
+    <div class="row">
+      <label>Délka vedení L<div class="hint">Jednosměrná vzdálenost – kabel jde tam i zpět</div></label>
+      <input type="number" id="dc_l" value="20" step="1" min="0.1">
+      <span class="unit">m</span>
+    </div>
+    <div class="row">
+      <label>Průřez vodiče S</label>
+      <input type="number" id="dc_s" value="2.5" step="0.5" min="0.5">
+      <span class="unit">mm²</span>
+    </div>
+    <div class="row">
+      <label>Materiál vodiče</label>
+      <select id="dc_mat" onchange="dcVypocitej()">
+        <option value="0.01724">Cu – měď</option>
+        <option value="0.02826">Al – hliník</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>Max. povolený úbytek ΔU<div class="hint">Typicky 3–5 % pro DC obvody</div></label>
+      <input type="number" id="dc_du_max" value="3" step="0.5" min="0.5" max="20">
+      <span class="unit">%</span>
+    </div>
+  </div>
+
+  <button class="btn" onclick="dcVypocitej()">Vypočítat DC úbytek</button>
+
+  <!-- Výsledky DC -->
+  <div class="section" id="dc-vysledky" style="display:none">
+    <div class="section-title">Výsledky</div>
+
+    <div class="result-grid" style="padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="result-card">
+        <div class="label">Odpor vodiče R</div>
+        <div class="val neutral" id="dc-r">–</div>
+        <div class="sub">Ω (tam + zpět)</div>
+      </div>
+      <div class="result-card">
+        <div class="label">Úbytek napětí ΔU</div>
+        <div class="val accent" id="dc-du-v">–</div>
+        <div class="sub">V</div>
+      </div>
+      <div class="result-card">
+        <div class="label">Úbytek ΔU rel.</div>
+        <div class="val" id="dc-du-pct">–</div>
+        <div class="sub">%</div>
+      </div>
+      <div class="result-card">
+        <div class="label">Napětí na zátěži</div>
+        <div class="val neutral" id="dc-u-zat">–</div>
+        <div class="sub">V</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <label>Posouzení ΔU</label>
+      <span class="badge" id="dc-badge">–</span>
+    </div>
+    <div class="row">
+      <label>Max. povolený úbytek</label>
+      <span id="dc-du-max-val">–</span><span class="unit">%</span>
+    </div>
+  </div>
+
+  <!-- Doporučený průřez -->
+  <div class="section" id="dc-prurez-sekce" style="display:none">
+    <div class="section-title">Doporučený minimální průřez</div>
+    <div class="row">
+      <label>Pro zadaný max. ΔU<div class="hint">S = 2 · ρ · L · I / ΔU_abs</div></label>
+      <span id="dc-s-min" style="font-weight:700;color:var(--accent)">–</span>
+      <span class="unit">mm²</span>
+    </div>
+    <div class="row">
+      <label>Nejbližší normalizovaný průřez</label>
+      <span id="dc-s-norm" style="font-weight:700;color:var(--green)">–</span>
+      <span class="unit">mm²</span>
+    </div>
+  </div>
+
+  <!-- Vzorce -->
+  <div class="section">
+    <div class="section-title">Použité vzorce</div>
+    <div class="row">
+      <label>Odpor vedení</label>
+      <span class="unit" style="color:var(--text2);font-size:12px">R = 2 · ρ · L / S</span>
+    </div>
+    <div class="row">
+      <label>Úbytek napětí</label>
+      <span class="unit" style="color:var(--text2);font-size:12px">ΔU = R · I</span>
+    </div>
+    <div class="row">
+      <label>Relativní úbytek</label>
+      <span class="unit" style="color:var(--text2);font-size:12px">ΔU% = ΔU / U · 100</span>
+    </div>
+    <div class="row">
+      <label>Poznámka</label>
+      <span class="unit" style="color:var(--text2);font-size:11px;text-align:right">2L = tam + zpět</span>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -1149,13 +1266,62 @@ function showTab(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + id).classList.add('active');
+  const map = { vstup: '①', vysledky: '②', protokol: '③', dc: '④' };
   document.querySelectorAll('.tab').forEach(t => {
-    if (t.textContent.toLowerCase().includes(id === 'vstup' ? '①' : id === 'vysledky' ? '②' : '③')) {
-      t.classList.add('active');
-    }
+    if (map[id] && t.textContent.includes(map[id])) t.classList.add('active');
   });
-  // Scroll to top
-  window.scrollTo(0,0);
+  window.scrollTo(0, 0);
+}
+
+// ===================== DC VÝPOČET =====================
+const DC_NORM_PRUREZ = [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300];
+
+function dcVypocitej() {
+  var u      = parseFloat(document.getElementById('dc_u').value);
+  var i      = parseFloat(document.getElementById('dc_i').value);
+  var l      = parseFloat(document.getElementById('dc_l').value);
+  var s      = parseFloat(document.getElementById('dc_s').value);
+  var rho    = parseFloat(document.getElementById('dc_mat').value);
+  var duMaxPct = parseFloat(document.getElementById('dc_du_max').value);
+
+  if ([u, i, l, s, rho, duMaxPct].some(isNaN) || s <= 0 || u <= 0 || i <= 0) {
+    alert('Zkontroluj vstupní hodnoty'); return;
+  }
+
+  // R celkové (tam + zpět = 2L)
+  var R    = 2 * rho * l / s;
+  // Úbytek napětí
+  var duV  = R * i;
+  var duPct = (duV / u) * 100;
+  var uZat = u - duV;
+  var ok   = duPct <= duMaxPct;
+
+  // Minimální průřez pro zadaný max. ΔU
+  var duMaxAbs = u * duMaxPct / 100;
+  var sMin = 2 * rho * l * i / duMaxAbs;
+  // Nejbližší normalizovaný průřez ≥ sMin
+  var sNorm = DC_NORM_PRUREZ.find(function(v) { return v >= sMin; }) || DC_NORM_PRUREZ[DC_NORM_PRUREZ.length - 1];
+
+  // Zobrazit výsledky
+  document.getElementById('dc-vysledky').style.display = '';
+  document.getElementById('dc-prurez-sekce').style.display = '';
+
+  document.getElementById('dc-r').textContent      = R.toFixed(4);
+  document.getElementById('dc-du-v').textContent   = duV.toFixed(3);
+  document.getElementById('dc-du-max-val').textContent = duMaxPct.toFixed(1);
+
+  var duEl = document.getElementById('dc-du-pct');
+  duEl.textContent = duPct.toFixed(2);
+  duEl.className = 'val ' + (ok ? 'ok' : 'fail');
+
+  document.getElementById('dc-u-zat').textContent  = uZat.toFixed(2);
+
+  var badge = document.getElementById('dc-badge');
+  badge.textContent = ok ? '✔ VYHOVUJE' : '✘ NEVYHOVUJE';
+  badge.className = 'badge ' + (ok ? 'ok' : 'fail');
+
+  document.getElementById('dc-s-min').textContent  = sMin.toFixed(2);
+  document.getElementById('dc-s-norm').textContent = sNorm;
 }
 
 function soustavChange() {
@@ -1188,6 +1354,7 @@ window.soustavChange = soustavChange;
 window.zpusobChange = zpusobChange;
 window.tiskPDF = tiskPDF;
 window.kopirujProtokolText = kopirujProtokolText;
+window.dcVypocitej = dcVypocitej;
 </script>
 </body>
 </html>
